@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PC Doctor - Autodiagnóstico, Cotización y Agendamiento</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --success: #10b981;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); min-height: 100vh; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
+    h1 { font-size: 1.8rem; color: #38bdf8; display: flex; align-items: center; gap: 10px; }
+    
+    .btn { padding: 10px 18px; border-radius: 8px; border: none; font-weight: 500; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-admin { background: #334155; color: #f1f5f9; border: 1px solid var(--border); }
+    .btn-admin:hover { background: #475569; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { opacity: 0.9; }
+
+    .card { background: var(--card-bg); border-radius: 12px; padding: 25px; border: 1px solid var(--border); margin-bottom: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
+    
+    textarea, input, select { width: 100%; padding: 12px; background: #0f172a; border: 1px solid var(--border); border-radius: 6px; color: white; margin-top: 8px; margin-bottom: 16px; }
+    textarea:focus, input:focus { outline: 1px solid var(--accent); }
+
+    .sintomas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+    .sintoma-card { background: #0f172a; padding: 18px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
+    .sintoma-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    .opciones-grid { display: flex; gap: 15px; margin-top: 20px; }
+    .btn-opcion { flex: 1; padding: 15px; font-size: 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-si { background: var(--success); color: white; }
+    .btn-no { background: var(--danger); color: white; }
+
+    .presupuesto-tag { display: inline-block; background: #065f46; color: #34d399; font-weight: bold; font-size: 1.3rem; padding: 8px 16px; border-radius: 6px; margin: 15px 0; }
+
+    /* Modales */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .hidden { display: none !important; }
+    .modal { background: var(--card-bg); width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; padding: 30px; border-radius: 12px; border: 1px solid var(--border); }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { background: #0f172a; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>💻 PC Doctor</h1>
+      <button class="btn btn-admin" onclick="abrirPanelAdmin()">🔑 Panel Superusuario</button>
+    </header>
+
+    <!-- 1. BÚSQUEDA / ASISTENTE IA (V2.0 PROYECTADA) -->
+    <div class="card">
+      <h3>🤖 ¿No sabes qué tiene tu equipo o cómo explicarlo?</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Escribe lo que le ocurre a tu PC con tus propias palabras:</p>
+      <textarea id="textoAsistente" rows="3" placeholder="Ej: Mi computador suena muy fuerte, se calienta y después de jugar 10 minutos se apaga..."></textarea>
+      <button class="btn btn-primary" style="width: 100%;" onclick="consultarIA()">Consultar con Asistente IA</button>
+    </div>
+
+    <!-- 2. SELECCIÓN DE SÍNTOMAS -->
+    <div id="seccionSintomas" class="card">
+      <h3>O selecciona un síntoma directo:</h3>
+      <div id="contenedorSintomas" class="sintomas-grid">
+        <p style="color: var(--text-muted);">Cargando catálogo de síntomas desde MySQL...</p>
+      </div>
+    </div>
+
+    <!-- 3. CUESTIONARIO ADAPTATIVO DINÁMICO -->
+    <div id="seccionPregunta" class="card hidden">
+      <span id="categoriaBadge" style="color: #38bdf8; font-size: 0.85rem; font-weight: bold;">EVALUACIÓN DE DIAGNÓSTICO EN PROCESO</span>
+      <h2 id="textoPregunta" style="margin-top: 10px; font-size: 1.3rem;">Pregunta...</h2>
+      <div class="opciones-grid">
+        <button class="btn-opcion btn-si" onclick="responder(true)">SÍ</button>
+        <button class="btn-opcion btn-no" onclick="responder(false)">NO</button>
+      </div>
+    </div>
+
+    <!-- 4. DIAGNÓSTICO Y COTIZACIÓN FINAL EN CLP -->
+    <div id="seccionResultado" class="card hidden">
+      <h2 style="color: #38bdf8;">Diagnóstico Estimado</h2>
+      <h3 id="resTitulo" style="margin-top: 10px;">-</h3>
+      <p style="margin-top: 10px;"><strong>Causa Probable:</strong> <span id="resCausa" style="color: var(--text-muted);">-</span></p>
+      <p style="margin-top: 10px;"><strong>Solución Recomendada:</strong> <span id="resSolucion" style="color: var(--text-muted);">-</span></p>
+      <div>
+        <span class="presupuesto-tag" id="resPresupuesto">$0 CLP</span>
+      </div>
+      <button class="btn btn-primary" style="width: 100%; margin-top: 10px;" onclick="abrirModalAgendamiento()">📅 Agendar Visita / Solicitar Reparación</button>
+      <button class="btn btn-admin" style="width: 100%; margin-top: 10px;" onclick="reiniciar()">🔄 Reiniciar Diagnóstico</button>
+    </div>
+  </div>
+
+  <!-- MODAL DE AGENDAMIENTO DE CITAS -->
+  <div id="modalAgendamiento" class="modal-overlay hidden">
+    <div class="modal">
+      <h2>Agendar Visita Técnica</h2>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Ingresa tus datos de contacto para coordinar la revisión presencial.</p>
+      <form id="formAgendamiento" onsubmit="confirmarAgendamiento(event)">
+        <label>RUT Cliente:</label>
+        <input type="text" id="cliRut" placeholder="12.345.678-9" required>
+        
+        <label>Nombre Completo:</label>
+        <input type="text" id="cliNombre" placeholder="Juan Pérez" required>
+        
+        <label>Correo Electrónico:</label>
+        <input type="email" id="cliCorreo" placeholder="juan@gmail.com" required>
+        
+        <label>Teléfono de Contacto:</label>
+        <input type="tel" id="cliTelefono" placeholder="+56912345678" required>
+        
+        <label>Fecha Estimada de Visita:</label>
+        <input type="date" id="cliFecha" required>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Confirmar Agendamiento</button>
+          <button type="button" class="btn btn-admin" onclick="cerrarModalAgendamiento()">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PANEL SUPERUSUARIO / ADMIN -->
+  <div id="modalAdmin" class="modal-overlay hidden">
+    <div class="modal" style="max-width: 850px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>🔑 Panel Administrador / Técnico</h2>
+        <button class="btn btn-admin" onclick="cerrarPanelAdmin()">Cerrar</button>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 5px;">Gestión de agendamientos y revisión de diagnósticos registrados en MySQL.</p>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>RUT</th>
+              <th>Cliente</th>
+              <th>Contacto</th>
+              <th>Presupuesto</th>
+              <th>Fecha Visita</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tablaAdminBody">
+            <tr><td colspan="7">Cargando agendamientos...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.port === '8080' ? '' : 'http://localhost:8080';
+
+    let preguntaActual = null;
+    let diagnosticoFinal = null;
+    let historialRespuestas = [];
+    let solicitudesGuardadas = []; // Almacenamiento local para visualización limpia en Admin
+
+    // Helper defensivo para extraer IDs
+    function extraerId(obj, campos) {
+      if (!obj) return null;
+      for (let campo of campos) {
+        let val = obj[campo];
+        if (val !== undefined && val !== null) {
+          if (typeof val === 'object') {
+            return val.idPregunta || val.id_pregunta || val.idDiagnostico || val.id_diagnostico || val.id || null;
+          }
+          return val;
+        }
+      }
+      return null;
+    }
+
+    // 1. CARGAR SÍNTOMAS AL INICIAR
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarSintomas();
+      const mañana = new Date();
+      mañana.setDate(mañana.getDate() + 1);
+      document.getElementById('cliFecha').min = mañana.toISOString().split('T')[0];
+    });
+
+    function cargarSintomas() {
+      fetch(`${API_BASE}/api/sintomas`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP Error Status: ${res.status}`);
+          return res.json();
+        })
+        .then(sintomas => {
+          const cont = document.getElementById('contenedorSintomas');
+          cont.innerHTML = '';
+          if (!sintomas || sintomas.length === 0) {
+            cont.innerHTML = '<p>No hay síntomas registrados en la BD.</p>';
+            return;
+          }
+          sintomas.forEach(s => {
+            const idSint = extraerId(s, ['idSintoma', 'id_sintoma', 'id']);
+            const nombreEscapado = (s.nombre || '').replace(/'/g, "\\'");
+            cont.innerHTML += `
+              <div class="sintoma-card" onclick="iniciarPreguntas(${idSint}, '${nombreEscapado}')">
+                <h4 style="color:#38bdf8;">${s.nombre}</h4>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-top:5px;">${s.descripcion || ''}</p>
+              </div>
+            `;
+          });
+        })
+        .catch(err => {
+          console.error("Error al cargar síntomas:", err);
+          document.getElementById('contenedorSintomas').innerHTML = `
+            <p style="color:var(--danger);">Error conectando con la API backend (/api/sintomas). Asegúrate de tener corriendo Spring Boot en http://localhost:8080 y verificar MySQL.</p>
+          `;
+        });
+    }
+
+    // 2. INICIAR CUESTIONARIO CON NOMBRE DE CATEGORÍA
+    function iniciarPreguntas(idSintoma, nombreSintoma) {
+      const tituloSintoma = nombreSintoma || `Síntoma #${idSintoma}`;
+      historialRespuestas = [`CATEGORÍA: ${tituloSintoma}`];
+      fetch(`${API_BASE}/api/preguntas/sintoma/${idSintoma}`)
+        .then(res => {
+          if (!res.ok) throw new Error("Falla al consultar preguntas por síntoma");
+          return res.json();
+        })
+        .then(preguntas => {
+          if (preguntas && preguntas.length > 0) {
+            preguntaActual = preguntas[0];
+            mostrarPregunta();
+          } else {
+            alert("No hay preguntas asociadas a este síntoma en la base de datos.");
+          }
+        })
+        .catch(err => console.error("Error al cargar preguntas:", err));
+    }
+
+    function mostrarPregunta() {
+      document.getElementById('seccionSintomas').classList.add('hidden');
+      document.getElementById('seccionPregunta').classList.remove('hidden');
+      document.getElementById('textoPregunta').innerText = preguntaActual.textoPregunta || preguntaActual.texto_pregunta;
+    }
+
+    // 3. RESPONDER GUARDANDO EL TEXTO COMPLETO DE LA PREGUNTA Y LA RESPUESTA
+    function responder(esAfirmativo) {
+      const textoResp = esAfirmativo ? "SÍ" : "NO";
+      const textoPreg = preguntaActual.textoPregunta || preguntaActual.texto_pregunta || 'Pregunta';
+      
+      historialRespuestas.push(`• ${textoPreg} ➔ ${textoResp}`);
+
+      const sigId = esAfirmativo 
+        ? extraerId(preguntaActual, ['idSiguienteSi', 'id_siguiente_si', 'siguienteSi', 'siguiente_si'])
+        : extraerId(preguntaActual, ['idSiguienteNo', 'id_siguiente_no', 'siguienteNo', 'siguiente_no']);
+
+      const diagId = esAfirmativo 
+        ? extraerId(preguntaActual, ['idDiagnosticoSi', 'id_diagnostico_si', 'diagnosticoSi', 'diagnostico_si'])
+        : extraerId(preguntaActual, ['idDiagnosticoNo', 'id_diagnostico_no', 'diagnosticoNo', 'diagnostico_no']);
+
+      if (diagId) {
+        cargarDiagnostico(diagId);
+      } else if (sigId) {
+        fetch(`${API_BASE}/api/preguntas/${sigId}`)
+          .then(res => {
+            if (!res.ok) throw new Error("No se pudo cargar la siguiente pregunta.");
+            return res.json();
+          })
+          .then(p => {
+            preguntaActual = p;
+            mostrarPregunta();
+          })
+          .catch(err => {
+            console.error("Error cargando siguiente pregunta:", err);
+            alert("Error al cargar la siguiente pregunta desde el servidor.");
+          });
+      } else {
+        alert("No se encontró una ruta de navegación ni un diagnóstico final asignado a esta opción.");
+      }
+    }
+
+    // 4. CARGAR RESULTADO Y PRESUPUESTO EN CLP
+    function cargarDiagnostico(idDiag) {
+      fetch(`${API_BASE}/api/diagnosticos/${idDiag}`)
+        .then(res => {
+          if (!res.ok) {
+            return fetch(`${API_BASE}/api/diagnostico/${idDiag}`);
+          }
+          return res;
+        })
+        .then(res => {
+          if (!res.ok) throw new Error(`El diagnóstico ID ${idDiag} no existe en la base de datos MySQL.`);
+          return res.json();
+        })
+        .then(d => {
+          diagnosticoFinal = d;
+          document.getElementById('seccionPregunta').classList.add('hidden');
+          document.getElementById('seccionResultado').classList.remove('hidden');
+          
+          document.getElementById('resTitulo').innerText = d.titulo || 'Diagnóstico no especificado';
+          document.getElementById('resCausa').innerText = d.causaProbable || d.causa_probable || '-';
+          document.getElementById('resSolucion').innerText = d.solucionRecomendada || d.solucion_recomendada || '-';
+          
+          const precio = d.presupuestoEstimadoClp || d.presupuesto_estimado_clp || 0;
+          document.getElementById('resPresupuesto').innerText = `$${Number(precio).toLocaleString('es-CL')} CLP`;
+        })
+        .catch(err => {
+          console.error("Error cargando diagnóstico:", err);
+          alert(`Error al cargar la información del diagnóstico final (ID: ${idDiag}). Verifique que la tabla 'diagnosticos' en MySQL contenga los registros.`);
+        });
+    }
+
+    function reiniciar() {
+      preguntaActual = null;
+      diagnosticoFinal = null;
+      historialRespuestas = [];
+      document.getElementById('seccionResultado').classList.add('hidden');
+      document.getElementById('seccionPregunta').classList.add('hidden');
+      document.getElementById('seccionSintomas').classList.remove('hidden');
+    }
+
+    // 5. AGENDAMIENTO DE CITAS EN MYSQL
+    function abrirModalAgendamiento() { document.getElementById('modalAgendamiento').classList.remove('hidden'); }
+    function cerrarModalAgendamiento() { document.getElementById('modalAgendamiento').classList.add('hidden'); }
+
+    function confirmarAgendamiento(e) {
+      e.preventDefault();
+      const idDiagFinal = extraerId(diagnosticoFinal, ['idDiagnostico', 'id_diagnostico', 'id']);
+      const payload = {
+        rut: document.getElementById('cliRut').value,
+        nombre: document.getElementById('cliNombre').value,
+        correo: document.getElementById('cliCorreo').value,
+        telefono: document.getElementById('cliTelefono').value,
+        idDiagnostico: idDiagFinal,
+        resumenRespuestas: historialRespuestas.join("\n"),
+        presupuestoTotal: diagnosticoFinal.presupuestoEstimadoClp || diagnosticoFinal.presupuesto_estimado_clp || 0,
+        fechaVisita: document.getElementById('cliFecha').value,
+        estado: 'PENDIENTE'
+      };
+
+      fetch(`${API_BASE}/api/solicitudes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Falla al guardar agendamiento.");
+        return res.json();
+      })
+      .then(data => {
+        alert("✅ ¡Agendamiento registrado con éxito en la base de datos MySQL!");
+        cerrarModalAgendamiento();
+        reiniciar();
+      })
+      .catch(err => alert("Error al registrar agendamiento: " + err.message));
+    }
+
+    // 6. PANEL SUPERUSUARIO / ADMIN
+    function abrirPanelAdmin() {
+      const pass = prompt("Ingrese la clave de superusuario:");
+      if (pass === 'admin123') {
+        document.getElementById('modalAdmin').classList.remove('hidden');
+        cargarTablaAdmin();
+      } else if (pass !== null) {
+        alert("❌ Clave incorrecta. Acceso denegado.");
+      }
+    }
+
+    function cerrarPanelAdmin() { document.getElementById('modalAdmin').classList.add('hidden'); }
+
+    function cargarTablaAdmin() {
+      fetch(`${API_BASE}/api/solicitudes`)
+        .then(res => {
+          if (!res.ok) throw new Error("No se pudieron cargar las solicitudes");
+          return res.json();
+        })
+        .then(lista => {
+          solicitudesGuardadas = lista || [];
+          const tbody = document.getElementById('tablaAdminBody');
+          tbody.innerHTML = '';
+          if (!solicitudesGuardadas || solicitudesGuardadas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No existen citas agendadas en la base de datos.</td></tr>';
+            return;
+          }
+          solicitudesGuardadas.forEach((item, index) => {
+            const cliente = item.cliente || {};
+            const idSol = extraerId(item, ['idSolicitud', 'id_solicitud', 'id']);
+
+            tbody.innerHTML += `
+              <tr>
+                <td>${idSol}</td>
+                <td>${cliente.rut || item.rut || '-'}</td>
+                <td>${cliente.nombre || item.nombre || '-'}</td>
+                <td>${cliente.correo || item.correo || ''}<br><small>${cliente.telefono || item.telefono || ''}</small></td>
+                <td>$${Number(item.presupuestoTotal || item.presupuesto_total || 0).toLocaleString('es-CL')}</td>
+                <td>${item.fechaVisita || item.fecha_visita}</td>
+                <td>
+                  <button class="btn btn-admin" style="padding:4px 8px; font-size:0.75rem;" onclick="verDetalle(${index})">📋 Ver</button>
+                  <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="borrarCita(${idSol})">🗑️ Borrar</button>
+                </td>
+              </tr>
+            `;
+          });
+        })
+        .catch(err => console.error("Error al cargar panel admin:", err));
+    }
+
+    function verDetalle(index) {
+      const item = solicitudesGuardadas[index];
+      if (item) {
+        const detalle = item.resumenRespuestas || item.resumen_respuestas || 'Sin detalle';
+        alert(detalle);
+      }
+    }
+
+    function borrarCita(id) {
+      if (confirm(`¿Estás seguro de cancelar y eliminar la cita ID ${id}?`)) {
+        fetch(`${API_BASE}/api/solicitudes/${id}`, { method: 'DELETE' })
+          .then(res => {
+            if (!res.ok) throw new Error("Falla al eliminar la cita.");
+            cargarTablaAdmin();
+          })
+          .catch(err => alert("Error al eliminar cita: " + err.message));
+      }
+    }
+
+    function consultarIA() {
+      const texto = document.getElementById('textoAsistente').value;
+      if (!texto.trim()) { alert("Por favor escribe tu consulta."); return; }
+      alert("🤖 Módulo de IA Conversacional v2.0 proyectado. Redirigiendo al árbol de inferencia relacional...");
+      iniciarPreguntas(1, "Búsqueda IA");
+    }
+  </script>
+</body>
+</html>
