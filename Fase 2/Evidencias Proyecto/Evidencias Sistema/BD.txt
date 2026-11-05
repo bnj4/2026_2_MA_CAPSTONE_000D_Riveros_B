@@ -1,0 +1,148 @@
+-- ============================================================
+-- SCRIPT DEFINITIVO Y COMPLETO: pc_doctor_db (21 PREGUNTAS)
+-- Sistema: PC Doctor – Autodiagnóstico, Cotización y Agendamiento
+-- Compatibilidad: MySQL 8.0+ / MariaDB (XAMPP phpMyAdmin)
+-- Árbol de Inferencia: 21 Preguntas Relacionales Integrales
+-- ============================================================
+
+CREATE DATABASE IF NOT EXISTS `pc_doctor_db`
+DEFAULT CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+
+USE `pc_doctor_db`;
+
+-- Desactivar restricciones temporalmente para recreación limpia
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `solicitudes_reparacion`;
+DROP TABLE IF EXISTS `clientes`;
+DROP TABLE IF EXISTS `preguntas`;
+DROP TABLE IF EXISTS `diagnosticos`;
+DROP TABLE IF EXISTS `sintomas`;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ------------------------------------------------------------
+-- 1. TABLA: sintomas
+-- ------------------------------------------------------------
+CREATE TABLE `sintomas` (
+  `id_sintoma` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `nombre` VARCHAR(100) NOT NULL,
+  `descripcion` VARCHAR(255) NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 2. TABLA: diagnosticos (9 Diagnósticos Técnicos)
+-- ------------------------------------------------------------
+CREATE TABLE `diagnosticos` (
+  `id_diagnostico` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `titulo` VARCHAR(150) NOT NULL,
+  `causa_probable` TEXT NOT NULL,
+  `solucion_recomendada` TEXT NOT NULL,
+  `presupuesto_estimado_clp` DECIMAL(10, 2) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 3. TABLA: preguntas (Árbol de Inferencia de 21 Nodos)
+-- ------------------------------------------------------------
+CREATE TABLE `preguntas` (
+  `id_pregunta` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `id_sintoma` BIGINT NOT NULL,
+  `texto_pregunta` TEXT NOT NULL,
+  `id_siguiente_si` BIGINT NULL,
+  `id_siguiente_no` BIGINT NULL,
+  `id_diagnostico_si` BIGINT NULL,
+  `id_diagnostico_no` BIGINT NULL,
+  CONSTRAINT `fk_preguntas_sintoma` FOREIGN KEY (`id_sintoma`) REFERENCES `sintomas` (`id_sintoma`) ON DELETE CASCADE,
+  CONSTRAINT `fk_preguntas_sig_si` FOREIGN KEY (`id_siguiente_si`) REFERENCES `preguntas` (`id_pregunta`) ON DELETE SET NULL,
+  CONSTRAINT `fk_preguntas_sig_no` FOREIGN KEY (`id_siguiente_no`) REFERENCES `preguntas` (`id_pregunta`) ON DELETE SET NULL,
+  CONSTRAINT `fk_preguntas_diag_si` FOREIGN KEY (`id_diagnostico_si`) REFERENCES `diagnosticos` (`id_diagnostico`) ON DELETE SET NULL,
+  CONSTRAINT `fk_preguntas_diag_no` FOREIGN KEY (`id_diagnostico_no`) REFERENCES `diagnosticos` (`id_diagnostico`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 4. TABLA: clientes
+-- ------------------------------------------------------------
+CREATE TABLE `clientes` (
+  `id_cliente` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `rut` VARCHAR(12) NOT NULL UNIQUE,
+  `nombre` VARCHAR(150) NOT NULL,
+  `correo` VARCHAR(150) NOT NULL,
+  `telefono` VARCHAR(20) NOT NULL,
+  `fecha_registro` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- 5. TABLA: solicitudes_reparacion
+-- ------------------------------------------------------------
+CREATE TABLE `solicitudes_reparacion` (
+  `id_solicitud` BIGINT AUTO_INCREMENT PRIMARY KEY,
+  `id_cliente` BIGINT NOT NULL,
+  `id_diagnostico` BIGINT NULL,
+  `resumen_respuestas` TEXT NULL,
+  `presupuesto_total` DECIMAL(10, 2) NOT NULL,
+  `fecha_visita` DATE NOT NULL,
+  `estado` VARCHAR(50) DEFAULT 'PENDIENTE',
+  `fecha_creacion` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_solicitudes_cliente` FOREIGN KEY (`id_cliente`) REFERENCES `clientes` (`id_cliente`) ON DELETE CASCADE,
+  CONSTRAINT `fk_solicitudes_diagnostico` FOREIGN KEY (`id_diagnostico`) REFERENCES `diagnosticos` (`id_diagnostico`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- INSERCIÓN DE DATOS COMPLETA (21 PREGUNTAS Y 9 DIAGNÓSTICOS)
+-- ============================================================
+
+-- 1. Categorías de Síntomas
+INSERT INTO `sintomas` (`id_sintoma`, `nombre`, `descripcion`) VALUES
+(1, 'Sobrecalentamiento y Apagado Repentino', 'Fallas térmicas, reinicios inesperados y altas temperaturas en CPU/GPU.'),
+(2, 'Lentitud General y Congelamiento', 'Demora en inicio, bloqueo de aplicaciones y alto uso de disco/RAM.'),
+(3, 'Fallas de Encendido y Alimentación', 'El equipo no enciende, emite pitidos o se apaga inmediatamente al pulsar el botón.');
+
+-- 2. Catálogo de Diagnósticos Técnicos en CLP
+INSERT INTO `diagnosticos` (`id_diagnostico`, `titulo`, `causa_probable`, `solucion_recomendada`, `presupuesto_estimado_clp`) VALUES
+(1, 'Sobrecalentamiento Crítico por Pasta Térmica Seca', 'Pasta térmica de la CPU degradada y acumulación de polvo en disipador.', 'Limpieza interna completa y cambio de pasta térmica de alta conductividad.', 15000.00),
+(2, 'Falla en Ventilador de CPU / Cooler', 'Ventilador del cooler dañado o bloqueado mecánicamente.', 'Reemplazo del cooler de CPU y verificación de flujo de aire.', 25000.00),
+(3, 'Falla de Bomba de Refrigeración Líquida (AIO)', 'Bomba AIO averiada o con aire atrapado en el circuito cerrado.', 'Reemplazo del sistema AIO de refrigeración líquida.', 45000.00),
+(4, 'Degradación / Sectores Defectuosos en Disco Magnético (HDD)', 'Sectores defectuosos o desgaste mecánico en el disco duro principal.', 'Clonación e instalación de unidad de estado sólido (SSD NVMe/SATA).', 35000.00),
+(5, 'Saturación de Memoria RAM por Malware / Procesos Parásitos', 'Procesos en segundo plano o software malicioso consumiendo recursos.', 'Desinfección de sistema, limpieza de inicio y optimización de RAM.', 20000.00),
+(6, 'Falta de Capacidad de Memoria RAM Física', 'Capacidad de RAM insuficiente para el sistema operativo y programas.', 'Ampliación de memoria RAM (Upgrade a 16GB/32GB).', 30000.00),
+(7, 'Falla de Fuente de Poder (PSU)', 'Tensión inestable o pérdida de potencia en rieles de 12V.', 'Reemplazo de fuente de poder certificada (80 Plus).', 40000.00),
+(8, 'Cortocircuito / Falla en Placa Madre (VRM)', 'Componentes electrónicos dañados en la entrega de energía de la placa madre.', 'Reparación de microelectrónica o cambio de placa madre.', 55000.00),
+(9, 'Incompatibilidad o Sulfatación de Contactos de RAM', 'Contactos de memoria RAM sucios, inestables o mal asentados.', 'Limpieza de contactos con alcohol isopropílico y prueba MemTest.', 18000.00);
+
+-- 3. Árbol de Inferencia Completo (21 Preguntas Relacionales)
+INSERT INTO `preguntas` (`id_pregunta`, `id_sintoma`, `texto_pregunta`, `id_siguiente_si`, `id_siguiente_no`, `id_diagnostico_si`, `id_diagnostico_no`) VALUES
+-- RAMA SÍNTOMA 1: Sobrecalentamiento y Apagado (7 Preguntas: IDs 1 a 7)
+(1, 1, '¿Los ventiladores suenan a máxima velocidad constantemente?', 2, 3, NULL, NULL),
+(2, 1, '¿El gabinete o disipador se siente excesivamente caliente al tacto?', 4, 5, NULL, NULL),
+(3, 1, '¿El equipo se apaga repentinamente a los pocos minutos de encender?', 4, 5, NULL, NULL),
+(4, 1, '¿Ha pasado más de 1 año desde el último cambio de pasta térmica?', NULL, NULL, 1, 2),
+(5, 1, '¿Utiliza un sistema de refrigeración líquida (AIO)?', NULL, NULL, 3, 1),
+(6, 1, '¿Se observan reinicios repentinos exclusivamente durante juegos o cargas pesadas?', 7, NULL, NULL, 2),
+(7, 1, '¿El software de monitoreo registra temperaturas superiores a 90°C en la CPU?', NULL, NULL, 1, 2),
+
+-- RAMA SÍNTOMA 2: Lentitud General y Congelamiento (7 Preguntas: IDs 8 a 14)
+(8, 2, '¿El Administrador de Tareas muestra el uso de Disco al 100% constantemente?', 9, 10, NULL, NULL),
+(9, 2, '¿El unidad de almacenamiento principal es un Disco Duro Mecánico (HDD)?', 11, 12, NULL, NULL),
+(10, 2, '¿La memoria RAM se mantiene por encima del 85% sin programas abiertos?', 13, 14, NULL, NULL),
+(11, 2, '¿Escucha ruidos metálicos ("clic-clic") provenientes del almacenamiento?', NULL, NULL, 4, 4),
+(12, 2, '¿Existen ventanas emergentes o publicidad no deseada al navegar por internet?', NULL, NULL, 5, 4),
+(13, 2, '¿El sistema tiene instalado 8 GB o menos de memoria RAM física?', NULL, NULL, 6, 5),
+(14, 2, '¿El equipo se congela por completo requiriendo reinicio forzado con el botón?', NULL, NULL, 6, 5),
+
+-- RAMA SÍNTOMA 3: Fallas de Encendido y Alimentación (7 Preguntas: IDs 15 a 21)
+(15, 3, '¿Enciende alguna luz LED o gira algún ventilador al pulsar el botón de encendido?', 16, 17, NULL, NULL),
+(16, 3, '¿El equipo emite pitidos secuenciales metálicos al intentar arrancar?', 18, 19, NULL, NULL),
+(17, 3, '¿Ha probado conectar el equipo a otro tomacorriente sin obtener respuesta?', 20, 21, NULL, NULL),
+(18, 3, '¿Los pitidos son intermitentes en secuencias de 3 o más tonos cortos?', NULL, NULL, 9, 7),
+(19, 3, '¿Hay señal de video en el monitor o la pantalla permanece completamente negra?', NULL, NULL, 9, 8),
+(20, 3, '¿Se percibe olor a quemado o se escuchó un chasquido cerca de la fuente de poder?', NULL, NULL, 7, 8),
+(21, 3, '¿El botón físico de encendido se siente suelto o atascado mecánicamente?', NULL, NULL, 7, 8);
+
+-- Datos de Prueba Inicial (Cliente y Agendamiento)
+INSERT INTO `clientes` (`id_cliente`, `rut`, `nombre`, `correo`, `telefono`) VALUES
+(1, '12.345.678-9', 'Juan Pérez', 'juan.perez@gmail.com', '+56912345678');
+
+INSERT INTO `solicitudes_reparacion` (`id_solicitud`, `id_cliente`, `id_diagnostico`, `resumen_respuestas`, `presupuesto_total`, `fecha_visita`, `estado`) VALUES
+(1, 1, 1, 'Síntoma: Sobrecalentamiento | P1: Sí | P2: Sí | P4: Sí (Pasta seca)', 15000.00, '2026-11-06', 'PENDIENTE');
+
+-- Verificación de Inserción Correcta
+SELECT COUNT(*) AS total_preguntas FROM `preguntas`;

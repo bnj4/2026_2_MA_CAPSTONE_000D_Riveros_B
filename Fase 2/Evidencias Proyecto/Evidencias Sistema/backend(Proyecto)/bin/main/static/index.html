@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Doctor - Diagnóstico & Cotización</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --success: #10b981;
+            --danger: #ef4444;
+            --ai-color: #8b5cf6;
+            --ai-hover: #7c3aed;
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            padding: 30px;
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+        }
+
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .btn-admin-access {
+            background: #334155;
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        h1 { color: #38bdf8; margin: 0; }
+        p.subtitle { color: var(--text-sub); margin-bottom: 25px; }
+
+        .btn-option {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            margin: 8px 0;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-option:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #475569; }
+        .btn-secondary:hover { background-color: #334155; }
+        .btn-success { background-color: var(--success); }
+        .btn-success:hover { background-color: #059669; }
+        .btn-danger { background-color: var(--danger); padding: 6px 10px; font-size: 12px; border-radius: 4px; border: none; color: white; cursor: pointer; }
+        .btn-info { background-color: #0284c7; padding: 6px 10px; font-size: 12px; border-radius: 4px; border: none; color: white; cursor: pointer; margin-bottom: 4px; }
+        .btn-ai { background-color: var(--ai-color); }
+        .btn-ai:hover { background-color: var(--ai-hover); }
+
+        .card {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            text-align: left;
+        }
+
+        .ai-box {
+            background: #111827;
+            border: 1px solid #3b82f6;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .ai-box h4 {
+            margin: 0 0 8px 0;
+            color: #a78bfa;
+        }
+
+        textarea {
+            width: 100%;
+            height: 70px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+            resize: none;
+        }
+
+        .hidden { display: none !important; }
+
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 850px;
+            width: 95%;
+            text-align: left;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 15px 0;
+            border-radius: 6px;
+            border: 1px solid #475569;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #334155;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th { background: #0f172a; color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-bar">
+        <h1>💻 PC Doctor</h1>
+        <button class="btn-admin-access" onclick="accederAdmin()">🔑 Panel Superusuario</button>
+    </div>
+    <p class="subtitle">Diagnóstico Técnico y Cotización de Reparación</p>
+
+    <!-- Vista 1: Selección de Síntoma e Asistente IA -->
+    <div id="step-sintomas">
+        <div class="ai-box">
+            <h4>🤖 ¿No sabes qué tiene tu equipo o cómo explicarlo?</h4>
+            <p style="font-size: 13px; color: #94a3b8; margin-top: 0;">Escribe aquí lo que le ocurre a tu PC con tus propias palabras:</p>
+            <textarea id="ai-prompt" placeholder="Ej: Mi computador suena muy fuerte, se calienta y después de jugar 10 minutos se apaga..."></textarea>
+            <button class="btn-option btn-ai" style="margin-top: 10px; padding: 10px;" onclick="consultarIA()">Consultar con Asistente IA</button>
+        </div>
+
+        <h3>O selecciona un síntoma directo:</h3>
+        <div id="lista-sintomas">Cargando síntomas...</div>
+    </div>
+
+    <!-- Vista 2: Pregunta del Árbol -->
+    <div id="step-preguntas" class="hidden">
+        <h3 id="texto-pregunta">Cargando pregunta...</h3>
+        <button class="btn-option" onclick="responder(true)">Sí, confirmo este comportamiento</button>
+        <button class="btn-option btn-secondary" onclick="responder(false)">No / No se presenta</button>
+    </div>
+
+    <!-- Vista 3: Resultado de Diagnóstico y Cotización -->
+    <div id="step-diagnostico" class="hidden">
+        <h2 style="color: #4ade80;">Diagnóstico Final</h2>
+        <div class="card">
+            <h3 id="diag-titulo" style="color: #38bdf8;"></h3>
+            <p><strong>Causa Probable:</strong> <span id="diag-causa"></span></p>
+            <p><strong>Solución Recomendada:</strong> <span id="diag-solucion"></span></p>
+            <hr style="border-color: #334155;">
+            <p style="font-size: 18px;"><strong>Presupuesto Estimado:</strong> $<span id="diag-precio" style="color: #4ade80; font-weight: bold;"></span> CLP</p>
+        </div>
+        <button class="btn-option btn-success" onclick="abrirModalContacto()">Agendar Visita / Solicitar Reparación</button>
+        <button class="btn-option btn-secondary" onclick="reiniciar()">Realizar otro diagnóstico</button>
+    </div>
+</div>
+
+<!-- Modal Cliente para solicitar reparación -->
+<div id="modal-contacto" class="modal hidden">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 style="color: #38bdf8; margin-top:0;">Agendar Servicio Técnico</h3>
+        
+        <label>RUT / Credencial:</label>
+        <input type="text" id="cliente-rut" placeholder="Ej: 12345678-9">
+
+        <label>Nombre Completo:</label>
+        <input type="text" id="cliente-nombre" placeholder="Ej: Juan Pérez">
+
+        <label>Correo Electrónico:</label>
+        <input type="email" id="cliente-correo" placeholder="ejemplo@correo.com">
+
+        <label>Teléfono de Contacto:</label>
+        <input type="text" id="cliente-telefono" placeholder="+56912345678">
+
+        <label>Fecha Estimada de Visita (A partir de mañana):</label>
+        <input type="date" id="fecha-visita">
+
+        <button class="btn-option btn-success" onclick="guardarSolicitud()">Confirmar Agendamiento</button>
+        <button type="button" class="btn-option btn-secondary" onclick="cerrarModalContacto()">Cancelar / Volver</button>
+    </div>
+</div>
+
+<!-- Modal SUPERUSUARIO / PANEL DE ADMINISTRACIÓN -->
+<div id="modal-admin" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="color: #38bdf8; margin-top:0;">🛡️ Panel de Administración - Agendamientos en Base de Datos</h3>
+        <p style="font-size: 12px; color: #94a3b8;">Control de citas registradas, datos de contacto del cliente e historial de respuestas del cuestionario.</p>
+
+        <div id="tabla-citas-container">Cargando agendamientos...</div>
+
+        <button type="button" class="btn-option btn-secondary" style="margin-top:20px;" onclick="cerrarModalAdmin()">Cerrar Panel</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://localhost:8080/api";
+    let preguntaActual = null;
+    let diagnosticoActual = null;
+    let historialRespuestas = [];
+
+    const causasMap = {
+        1: { titulo: "Sobrecalentamiento del Procesador (CPU)", causa: "Pasta térmica seca o ventilación obstruida.", solucion: "Mantenimiento preventivo y limpieza.", precio: "15000" },
+        2: { titulo: "Temperatura Elevada en Tarjeta de Video (GPU)", causa: "Ventiladores trabados o polvo acumulado.", solucion: "Limpieza de GPU y reemplazo de thermal pads.", precio: "25000" },
+        3: { titulo: "Falla o Inestabilidad en Fuente de Poder", causa: "Capacitores desgastados o caídas de voltaje.", solucion: "Reemplazo de fuente de poder certificada.", precio: "35000" },
+        4: { titulo: "Inestabilidad en Memorias RAM", causa: "Contactos sucios o módulo RAM defectuoso.", solucion: "Limpieza con alcohol isopropílico o cambio de RAM.", precio: "20000" },
+        5: { titulo: "Falla de Controladores / Drivers de Video", causa: "Controladores de video corruptos.", solucion: "Reinstalación limpia con DDU.", precio: "10000" },
+        6: { titulo: "Desgaste / Falla de Unidad de Almacenamiento", causa: "Sectores defectuosos en disco o SSD.", solucion: "Instalación de SSD y respaldo de datos.", precio: "25000" },
+        7: { titulo: "Corrupción de Archivos del Sistema Operativo", causa: "Apagados repentinos durante actualizaciones.", solucion: "Reparación de imagen de Windows o formateo.", precio: "15000" },
+        8: { titulo: "Presencia de Software Malicioso o Virus", causa: "Procesos maliciosos en segundo plano.", solucion: "Desinfección y limpieza anti-malware.", precio: "18000" }
+    };
+
+    window.onload = function() {
+        configurarFechaMinima();
+        fetch(`${API_URL}/sintomas`)
+            .then(res => res.json())
+            .then(data => {
+                let html = "";
+                data.forEach(s => {
+                    let id = s.idSintoma || s.id_sintoma;
+                    html += `<button class="btn-option" onclick="iniciarDiagnostico(${id})">${s.nombre}</button>`;
+                });
+                document.getElementById("lista-sintomas").innerHTML = html;
+            })
+            .catch(err => alert("Error conectando con la API backend. Asegúrate de levantar Spring Boot."));
+    };
+
+    function accederAdmin() {
+        const clave = prompt("Ingrese la clave de Superusuario / Administrador:");
+        if (clave === "admin123" || clave === "admin") {
+            document.getElementById("modal-admin").classList.remove("hidden");
+            cargarCitasAdmin();
+        } else if (clave !== null) {
+            alert("Clave incorrecta. Acceso denegado.");
+        }
+    }
+
+    function cerrarModalAdmin() {
+        document.getElementById("modal-admin").classList.add("hidden");
+    }
+
+    function cargarCitasAdmin() {
+        fetch(`${API_URL}/solicitudes`)
+            .then(res => res.json())
+            .then(citas => {
+                if (citas.length === 0) {
+                    document.getElementById("tabla-citas-container").innerHTML = "<p>No hay agendamientos registrados actualmente en la base de datos.</p>";
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Cliente / RUT</th>
+                                <th>Contacto (Correo y Teléfono)</th>
+                                <th>Diagnóstico / Cotización</th>
+                                <th>Fecha Visita</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                citas.forEach(c => {
+                    let id = c.idSolicitud || c.id_solicitud;
+                    let cliente = c.cliente || {};
+                    let nombre = cliente.nombreCompleto || 'Cliente N/A';
+                    let rut = cliente.credencialRut || 'Sin RUT';
+                    let correo = cliente.correo || 'Sin Correo';
+                    let telefono = cliente.telefono || 'Sin Teléfono';
+
+                    let diagObj = c.diagnostico || {};
+                    let diagTitulo = diagObj.titulo || 'Diagnóstico N/A';
+                    let precio = diagObj.precioEstimado || diagObj.precio_estimado || '25000';
+                    let fecha = c.fechaVisitaAgendada;
+                    let respuestasRaw = c.resumenRespuestas || 'Sin historial de respuestas registrado';
+
+                    let respuestasEscaped = encodeURIComponent(respuestasRaw);
+
+                    html += `
+                        <tr>
+                            <td>
+                                <strong style="color:#38bdf8;">${nombre}</strong><br>
+                                <small style="color:#94a3b8;">RUT: ${rut}</small>
+                            </td>
+                            <td>
+                                ✉️ ${correo}<br>
+                                📞 ${telefono}
+                            </td>
+                            <td>
+                                <strong>${diagTitulo}</strong><br>
+                                <span style="color:#4ade80; font-weight:bold;">$${precio} CLP</span>
+                            </td>
+                            <td><strong>${fecha}</strong></td>
+                            <td>
+                                <button class="btn-info" onclick="verRespuestas('${respuestasEscaped}')">📋 Ver Respuestas</button><br>
+                                <button class="btn-danger" onclick="eliminarCita(${id})">Cancelar / Borrar</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                document.getElementById("tabla-citas-container").innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById("tabla-citas-container").innerHTML = "<p style='color:#ef4444;'>Error al cargar las solicitudes desde la API backend.</p>";
+            });
+    }
+
+    function verRespuestas(respuestasEncoded) {
+        const respuestas = decodeURIComponent(respuestasEncoded);
+        alert("📋 HISTORIAL DE RESPUESTAS DEL CLIENTE EN EL CUESTIONARIO:\n\n" + respuestas);
+    }
+
+    function eliminarCita(id) {
+        if (confirm("¿Estás seguro de que deseas cancelar/eliminar esta reserva de la base de datos?")) {
+            fetch(`${API_URL}/solicitudes/${id}`, { method: 'DELETE' })
+                .then(() => {
+                    alert("Cita eliminada correctamente de MySQL.");
+                    cargarCitasAdmin();
+                })
+                .catch(err => alert("Error al eliminar la cita."));
+        }
+    }
+
+    function consultarIA() {
+        const texto = document.getElementById("ai-prompt").value.toLowerCase().trim();
+        if (!texto) { alert("Por favor describe brevemente qué problema tiene tu computadora."); return; }
+
+        historialRespuestas = [`Consulta en IA libre: "${texto}"`];
+
+        if (texto.includes("apaga") || texto.includes("caliente") || texto.includes("sonido") || texto.includes("juego")) {
+            alert("🤖 IA PC Doctor: Detectamos un posible problema de Hardware. Derivando al cuestionario...");
+            iniciarDiagnostico(1);
+        } else if (texto.includes("azul") || texto.includes("error") || texto.includes("reinicia")) {
+            alert("🤖 IA PC Doctor: Detectamos un posible problema de Software. Derivando al cuestionario...");
+            iniciarDiagnostico(2);
+        } else {
+            alert("🤖 IA PC Doctor: Detectamos un problema de Rendimiento. Derivando al cuestionario...");
+            iniciarDiagnostico(3);
+        }
+    }
+
+    function configurarFechaMinima() {
+        const hoy = new Date();
+        const manana = new Date(hoy);
+        manana.setDate(manana.getDate() + 1);
+
+        const yyyy = manana.getFullYear();
+        const mm = String(manana.getMonth() + 1).padStart(2, '0');
+        const dd = String(manana.getDate()).padStart(2, '0');
+
+        const fechaMinima = `${yyyy}-${mm}-${dd}`;
+        const inputFecha = document.getElementById("fecha-visita");
+        if (inputFecha) { inputFecha.min = fechaMinima; inputFecha.value = fechaMinima; }
+    }
+
+    function iniciarDiagnostico(idSintoma) {
+        historialRespuestas = [`Síntoma Inicial Seleccionado ID: ${idSintoma}`];
+        fetch(`${API_URL}/preguntas/sintoma/${idSintoma}`)
+            .then(res => res.json())
+            .then(preguntas => {
+                if (preguntas.length > 0) {
+                    mostrarPregunta(preguntas[0]);
+                    document.getElementById("step-sintomas").classList.add("hidden");
+                    document.getElementById("step-preguntas").classList.remove("hidden");
+                }
+            });
+    }
+
+    function mostrarPregunta(pregunta) {
+        preguntaActual = pregunta;
+        document.getElementById("texto-pregunta").innerText = pregunta.textoPregunta || pregunta.texto_pregunta;
+    }
+
+    function responder(esAfirmativo) {
+        let textoPregunta = preguntaActual.textoPregunta || preguntaActual.texto_pregunta;
+        let respuestaTexto = esAfirmativo ? "SÍ" : "NO";
+        historialRespuestas.push(`- ${textoPregunta} -> [${respuestaTexto}]`);
+
+        let sigSi = preguntaActual.idSiguienteSi !== undefined ? preguntaActual.idSiguienteSi : preguntaActual.id_siguiente_si;
+        let sigNo = preguntaActual.idSiguienteNo !== undefined ? preguntaActual.idSiguienteNo : preguntaActual.id_siguiente_no;
+        let diagSi = preguntaActual.idDiagnosticoSi !== undefined ? preguntaActual.idDiagnosticoSi : preguntaActual.id_diagnostico_si;
+        let diagNo = preguntaActual.idDiagnosticoNo !== undefined ? preguntaActual.idDiagnosticoNo : preguntaActual.id_diagnostico_no;
+
+        let siguientePreguntaId = esAfirmativo ? sigSi : sigNo;
+        let diagnosticoId = esAfirmativo ? diagSi : diagNo;
+
+        if (siguientePreguntaId) {
+            fetch(`${API_URL}/preguntas/${siguientePreguntaId}`)
+                .then(res => res.json())
+                .then(data => mostrarPregunta(data));
+        } else if (diagnosticoId) {
+            mostrarDiagnostico(diagnosticoId);
+        } else {
+            alert("Atención: No hay más preguntas ni diagnóstico mapeado.");
+        }
+    }
+
+    function mostrarDiagnostico(id) {
+        fetch(`${API_URL}/diagnosticos/${id}`)
+            .then(res => res.json())
+            .then(d => {
+                diagnosticoActual = d || {};
+                let catalogo = causasMap[id] || {};
+
+                document.getElementById("diag-titulo").innerText = d.titulo || d.titulo_diagnostico || catalogo.titulo || "Diagnóstico Identificado";
+                document.getElementById("diag-causa").innerText = d.causaProbable || d.causa_probable || catalogo.causa || "Desgaste de componentes por uso continuo";
+                document.getElementById("diag-solucion").innerText = d.solucionRecomendada || d.solucion_recomendada || catalogo.solucion || "Revisión física por un técnico calificado";
+                document.getElementById("diag-precio").innerText = d.precioEstimado || d.precio_estimado || catalogo.precio || "25000";
+
+                document.getElementById("step-preguntas").classList.add("hidden");
+                document.getElementById("step-diagnostico").classList.remove("hidden");
+            })
+            .catch(err => {
+                let catalogo = causasMap[id] || {};
+                document.getElementById("diag-titulo").innerText = catalogo.titulo || "Diagnóstico Identificado";
+                document.getElementById("diag-causa").innerText = catalogo.causa || "Desgaste de componentes por uso continuo";
+                document.getElementById("diag-solucion").innerText = catalogo.solucion || "Revisión física por un técnico calificado";
+                document.getElementById("diag-precio").innerText = catalogo.precio || "25000";
+
+                document.getElementById("step-preguntas").classList.add("hidden");
+                document.getElementById("step-diagnostico").classList.remove("hidden");
+            });
+    }
+
+    function abrirModalContacto() { document.getElementById("modal-contacto").classList.remove("hidden"); }
+    function cerrarModalContacto() { document.getElementById("modal-contacto").classList.add("hidden"); }
+
+    function guardarSolicitud() {
+        const rut = document.getElementById("cliente-rut").value;
+        const nombre = document.getElementById("cliente-nombre").value;
+        const correo = document.getElementById("cliente-correo").value;
+        const telefono = document.getElementById("cliente-telefono").value;
+        const fecha = document.getElementById("fecha-visita").value;
+
+        if (!rut || !nombre || !correo || !telefono || !fecha) {
+            alert("Por favor complete todos los campos de contacto.");
+            return;
+        }
+
+        const resumenTexto = historialRespuestas.join("\n");
+
+        fetch(`${API_URL}/clientes`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ credencialRut: rut, nombreCompleto: nombre, correo: correo, telefono: telefono })
+        })
+        .then(res => res.json())
+        .then(cliente => {
+            let idCli = cliente.idCliente || cliente.id_cliente;
+            let idDiag = (diagnosticoActual && (diagnosticoActual.idDiagnostico || diagnosticoActual.id_diagnostico)) || 1;
+
+            return fetch(`${API_URL}/solicitudes`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    idCliente: idCli, 
+                    idDiagnostico: idDiag, 
+                    fechaVisita: fecha,
+                    resumenRespuestas: resumenTexto
+                })
+            });
+        })
+        .then(res => res.json())
+        .then(solicitud => {
+            alert("¡Agendamiento realizado con éxito! Se han registrado tus datos y tu historial de respuestas.");
+            cerrarModalContacto();
+        })
+        .catch(err => alert("Error al guardar la solicitud. Verifique los datos ingresados."));
+    }
+
+    function reiniciar() { location.reload(); }
+</script>
+</body>
+</html>
